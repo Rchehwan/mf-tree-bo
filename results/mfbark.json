@@ -1,0 +1,185 @@
+{
+ "method": "MF-BARK-final10-nowarm",
+ "tag": "ch3_bark_final10_nowarm_20260726_191351",
+ "n_seeds": 10,
+ "mean": 51.21262236921783,
+ "std": 9.711303016266807,
+ "finals": [
+  54.40052728561706,
+  52.24422907971749,
+  59.02540399058572,
+  55.09521060891166,
+  28.317093709283718,
+  57.20462070915498,
+  50.32356133006504,
+  58.74229418875163,
+  37.84659719265902,
+  58.92668559743201
+ ],
+ "fid_mix": {
+  "0": 58.6,
+  "1": 2.7,
+  "2": 12.7
+ },
+ "budget_pct": 101.49250000000004,
+ "seeds_using_mbr": 6,
+ "seeds_never_pilot": 0,
+ "ei_rounds_total": 0,
+ "wall_min": 43.829429332415266,
+ "bark_kw": {
+  "n_clones": 30,
+  "n_fidelities": 3,
+  "pilot_fidelity": 2,
+  "n_trees": 30,
+  "clone_rank": 3,
+  "n_burn": 220,
+  "n_keep": 25,
+  "thin": 6,
+  "n_max_train": 160
+ },
+ "run_kw": {
+  "n_pilot_init": 0
+ },
+ "per_seed": [
+  {
+   "fid_counts": {
+    "0": 37,
+    "1": 3,
+    "2": 14
+   },
+   "best_pilot_final": 54.40052728561706,
+   "pilot_rounds": 14,
+   "guard_needed": false,
+   "budget_frac": 1.035625,
+   "n_rounds": 54,
+   "elapsed": 188.78791975975037,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 22,
+    "1": 5,
+    "2": 12
+   },
+   "best_pilot_final": 52.24422907971749,
+   "pilot_rounds": 12,
+   "guard_needed": false,
+   "budget_frac": 1.000625,
+   "n_rounds": 39,
+   "elapsed": 123.30268597602844,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 104,
+    "1": 0,
+    "2": 13
+   },
+   "best_pilot_final": 59.02540399058572,
+   "pilot_rounds": 13,
+   "guard_needed": false,
+   "budget_frac": 1.011625,
+   "n_rounds": 117,
+   "elapsed": 442.96668815612793,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 206,
+    "1": 0,
+    "2": 7
+   },
+   "best_pilot_final": 55.09521060891166,
+   "pilot_rounds": 7,
+   "guard_needed": false,
+   "budget_frac": 1.002625,
+   "n_rounds": 213,
+   "elapsed": 819.1721601486206,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 26,
+    "1": 7,
+    "2": 10
+   },
+   "best_pilot_final": 28.317093709283718,
+   "pilot_rounds": 10,
+   "guard_needed": false,
+   "budget_frac": 1.022625,
+   "n_rounds": 43,
+   "elapsed": 122.92104816436768,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 31,
+    "1": 5,
+    "2": 12
+   },
+   "best_pilot_final": 57.20462070915498,
+   "pilot_rounds": 12,
+   "guard_needed": false,
+   "budget_frac": 1.027625,
+   "n_rounds": 48,
+   "elapsed": 148.62935781478882,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 41,
+    "1": 4,
+    "2": 12
+   },
+   "best_pilot_final": 50.32356133006504,
+   "pilot_rounds": 12,
+   "guard_needed": false,
+   "budget_frac": 1.000125,
+   "n_rounds": 57,
+   "elapsed": 204.40201592445374,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 63,
+    "1": 3,
+    "2": 12
+   },
+   "best_pilot_final": 58.74229418875163,
+   "pilot_rounds": 12,
+   "guard_needed": false,
+   "budget_frac": 1.008625,
+   "n_rounds": 78,
+   "elapsed": 284.7987060546875,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 19,
+    "1": 0,
+    "2": 18
+   },
+   "best_pilot_final": 37.84659719265902,
+   "pilot_rounds": 18,
+   "guard_needed": false,
+   "budget_frac": 1.019125,
+   "n_rounds": 37,
+   "elapsed": 112.87810277938843,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 37,
+    "1": 0,
+    "2": 17
+   },
+   "best_pilot_final": 58.92668559743201,
+   "pilot_rounds": 17,
+   "guard_needed": false,
+   "budget_frac": 1.020625,
+   "n_rounds": 54,
+   "elapsed": 181.85634303092957,
+   "ei_rounds": 0
+  }
+ ]
+}

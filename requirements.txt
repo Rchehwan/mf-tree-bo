@@ -1,0 +1,19 @@
+# Core numerics
+numpy>=1.24
+scipy>=1.10
+
+# Gaussian process baseline
+torch>=2.0
+gpytorch>=1.11
+botorch>=0.9
+
+# Tree surrogates
+ngboost>=0.4
+scikit-learn>=1.3
+
+# Figures
+matplotlib>=3.7
+
+# Not installable from PyPI — see README:
+#   dbiolab    (bioprocess simulator)
+#   mfbo4bio   (published multi-fidelity GP benchmark engine)

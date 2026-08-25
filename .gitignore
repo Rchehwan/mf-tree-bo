@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# Editors
+.vscode/
+*.code-workspace
+
+# Run artefacts (checkpoints are regenerable; summaries are tracked)
+*.pkl
+*.log
+logs/
+
+# Local scratch
+archive/
+scratch/
