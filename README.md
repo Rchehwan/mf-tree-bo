@@ -8,6 +8,14 @@ Two tree surrogates are built and benchmarked against a GP baseline on a simulat
 culture, where each experiment can be run at one of three scales of differing cost and
 accuracy and also selects one of 30 cell lines, under a fixed €40,000 experimental budget.
 
+<p align="center">
+  <a href="https://rchehwan.github.io/mf-tree-bo/">
+    <img src="https://img.shields.io/badge/▶%20Explore%20the%20model%20interactively-003E74?style=for-the-badge&labelColor=003E74" alt="Explore the model interactively">
+  </a>
+</p>
+
+<p align="center"><i>Move the sliders, follow a decision down the tree, see what it predicts.</i></p>
+
 ![Convergence](figures/03_convergence.png)
 
 ## Results
@@ -104,6 +112,7 @@ src/           surrogates, acquisition, BO loop, objective wrapper
 experiments/   one script per reported experiment
 results/       summary JSON for each reported run
 figures/       the figures reported in the write-up
+docs/          the interactive site, published with GitHub Pages
 ```
 
 Key modules:

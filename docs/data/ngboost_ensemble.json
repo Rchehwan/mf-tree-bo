@@ -1,0 +1,163 @@
+{
+ "method": "NGBoost_Ensemble_K10_MFMES",
+ "tag": "ch3_ngboost_ensemble_20260725_132340",
+ "n_seeds": 10,
+ "mean": 49.80503527177054,
+ "std": 9.106669835793781,
+ "finals": [
+  45.90237127915425,
+  54.300445285677405,
+  57.36031972021839,
+  39.371195983064645,
+  58.77511682127243,
+  52.058859896962,
+  49.56625142223745,
+  28.7454826477111,
+  59.3344766819212,
+  52.63583297948655
+ ],
+ "fid_mix": {
+  "0": 9.3,
+  "1": 0.0,
+  "2": 18.7
+ },
+ "seeds_using_mbr": 0,
+ "guard_needed": 0,
+ "seeds_never_pilot": 0,
+ "ei_rounds_per_seed": [
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0
+ ],
+ "ei_rounds_total": 0,
+ "budget_pct": 102.67750000000002,
+ "per_seed": [
+  {
+   "fid_counts": {
+    "0": 6,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 45.90237127915425,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 25,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 31,
+    "1": 0,
+    "2": 17
+   },
+   "best_pilot_final": 54.300445285677405,
+   "pilot_rounds": 17,
+   "guard_needed": false,
+   "n_rounds": 48,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 7,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 57.36031972021839,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 26,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 7,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 39.371195983064645,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 26,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 3,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 58.77511682127243,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 22,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 2,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 52.058859896962,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 21,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 5,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 49.56625142223745,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 24,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 2,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 28.7454826477111,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 21,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 12,
+    "1": 0,
+    "2": 19
+   },
+   "best_pilot_final": 59.3344766819212,
+   "pilot_rounds": 19,
+   "guard_needed": false,
+   "n_rounds": 31,
+   "ei_rounds": 0
+  },
+  {
+   "fid_counts": {
+    "0": 18,
+    "1": 0,
+    "2": 18
+   },
+   "best_pilot_final": 52.63583297948655,
+   "pilot_rounds": 18,
+   "guard_needed": false,
+   "n_rounds": 36,
+   "ei_rounds": 0
+  }
+ ]
+}
