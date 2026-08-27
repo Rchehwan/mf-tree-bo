@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tree surrogates for multi-fidelity Bayesian optimisation</title>
-<meta name="description" content="Interactive demo: can a decision tree replace the Gaussian process in multi-fidelity Bayesian optimisation for bioprocess development?">
+<meta name="description" content="Interactive demo: can a readable decision tree replace the Gaussian process in multi-fidelity Bayesian optimisation for bioprocess development?">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,14 +12,24 @@
 <a class="skip" href="#tree">Skip to the tree explorer</a>
 
 <header class="hero">
+  <div class="flask" aria-hidden="true">
+    <svg viewBox="0 0 120 160" width="120" height="160">
+      <path d="M46 8h28v46l30 74a10 10 0 0 1-9 14H25a10 10 0 0 1-9-14l30-74V8Z"
+            fill="none" stroke="rgba(255,255,255,.22)" stroke-width="3"/>
+      <path d="M28 108h64l14 34H14l14-34Z" fill="rgba(127,212,193,.20)"/>
+      <circle cx="46" cy="126" r="4" fill="rgba(127,212,193,.35)"/>
+      <circle cx="66" cy="118" r="3" fill="rgba(127,212,193,.30)"/>
+      <circle cx="78" cy="130" r="2.5" fill="rgba(127,212,193,.30)"/>
+    </svg>
+  </div>
   <div class="wrap">
     <p class="eyebrow">MSc research &middot; Imperial College London</p>
     <h1>Tree surrogates for<br><span class="accent">multi-fidelity</span> Bayesian optimisation</h1>
-    <p class="sub">Can a readable decision tree replace the Gaussian process at the centre of Bayesian optimisation? Three methods, one bioprocess simulator, a fixed &euro;40,000 budget.</p>
+    <p class="sub">Finding the best cell line and culture conditions, at the lowest experimental cost. Can a readable decision tree replace the Gaussian process at the centre of it?</p>
     <div class="stats" role="list">
-      <div class="stat" role="listitem"><b>56.3</b><span>GP baseline g/L</span></div>
-      <div class="stat" role="listitem"><b>51.2</b><span>MF&#8209;BARK g/L</span></div>
-      <div class="stat" role="listitem"><b>49.8</b><span>NGBoost g/L</span></div>
+      <div class="stat" role="listitem"><b>3</b><span>experimental scales</span></div>
+      <div class="stat" role="listitem"><b>30</b><span>candidate cell lines</span></div>
+      <div class="stat" role="listitem"><b>&euro;40k</b><span>fixed budget</span></div>
     </div>
   </div>
 </header>
@@ -30,16 +40,15 @@
   <section id="tree" aria-labelledby="tree-h">
     <div class="sechead">
       <h2 id="tree-h">Read the model</h2>
-      <p class="note">The interpretable method distils into one small tree. Move the controls to follow a decision to its leaf.</p>
+      <p class="note">The interpretable method distils to one small tree with <strong>eight possible outcomes</strong>. Move the controls to follow a recipe down to its leaf.</p>
     </div>
 
     <div class="explorer">
       <div class="controls">
         <div class="ctrl">
-          <label for="cy">Clone average yield <output id="cy-o">12.0</output></label>
-          <input type="range" id="cy" min="0" max="30" step="0.1" value="12"
-                 aria-describedby="cy-h">
-          <p class="hint" id="cy-h">How well that cell line has performed so far</p>
+          <label for="cy">Cell line, average yield so far <output id="cy-o">8.0</output></label>
+          <input type="range" id="cy" min="0" max="30" step="0.1" value="8" aria-describedby="cy-h">
+          <p class="hint" id="cy-h">How well this cell line has performed</p>
         </div>
         <div class="ctrl">
           <label for="ph">pH <output id="ph-o">6.40</output></label>
@@ -50,17 +59,18 @@
           <input type="range" id="tp" min="30" max="40" step="0.1" value="34">
         </div>
         <div class="ctrl" id="cb-wrap">
-          <label for="cb">Clone best titer <output id="cb-o">60.0</output></label>
-          <input type="range" id="cb" min="0" max="100" step="0.5" value="60">
+          <label for="cb">Cell line, best result so far <output id="cb-o">60.0</output></label>
+          <input type="range" id="cb" min="0" max="100" step="0.5" value="60" aria-describedby="cb-h">
           <p class="hint" id="cb-h">Only consulted on one branch</p>
         </div>
+        <button type="button" id="best" class="findbest">Take me to the best leaf</button>
       </div>
 
       <div class="readout">
         <div class="leafcard" id="leafcard">
           <p class="leaflabel">Predicted pilot titer</p>
           <p class="leafval"><span id="leafnum">12.0</span> <em>g/L</em></p>
-          <p class="leafrank" id="leafrank">Leaf 1 of 8</p>
+          <p class="leafrank" id="leafrank"></p>
         </div>
         <div class="path" aria-live="polite" aria-atomic="true">
           <h3>Decision path</h3>
@@ -69,14 +79,33 @@
       </div>
     </div>
 
-    <p class="caveat">These leaf values are what the <em>model</em> predicts, not measured experiments. The tree reproduces the full ensemble with an R&sup2; of 0.835 at depth&nbsp;3.</p>
+    <div class="leafstrip" aria-hidden="true">
+      <p class="striplab">All eight outcomes</p>
+      <div id="leafbar"></div>
+    </div>
+
+    <p class="caveat">A depth-3 tree has exactly eight leaves, so eight outcomes are possible and 26.0 g/L is the highest. These are what the <em>model</em> predicts, not measured experiments. The tree reproduces the full ensemble with an R&sup2; of 0.835.</p>
+  </section>
+
+  <!-- ── CONVERGENCE ─────────────────────────────────────────── -->
+  <section id="convergence" aria-labelledby="c-h">
+    <div class="sechead">
+      <h2 id="c-h">Spending the budget</h2>
+      <p class="note">Best pilot titer as money is spent, averaged over ten seeds. Toggle the methods to compare.</p>
+    </div>
+    <div class="toggles" id="toggles" role="group" aria-label="Show or hide methods"></div>
+    <div id="convchart" class="chart"></div>
+    <label class="bandtoggle">
+      <input type="checkbox" id="bands" checked> Show spread across seeds
+    </label>
+    <p class="caveat">These traces come from a separate ten-seed run, so the endpoints sit close to the reported means without matching them exactly.</p>
   </section>
 
   <!-- ── METHOD COMPARISON ───────────────────────────────────── -->
   <section id="methods" aria-labelledby="m-h">
     <div class="sechead">
-      <h2 id="m-h">Three methods</h2>
-      <p class="note">Final pilot titer per seed. Bars show the mean over 10 seeds, dots show individual runs.</p>
+      <h2 id="m-h">Where they finish</h2>
+      <p class="note">Final pilot titer. The line marks the mean, dots are the ten individual runs.</p>
     </div>
     <div id="chart" class="chart"></div>
     <div class="cards" id="mcards"></div>
@@ -94,28 +123,22 @@
 
   <!-- ── FIGURES ─────────────────────────────────────────────── -->
   <section id="figures" aria-labelledby="f-h">
-    <div class="sechead">
-      <h2 id="f-h">Results</h2>
-    </div>
+    <div class="sechead"><h2 id="f-h">Results</h2></div>
     <figure>
-      <img src="figures/03_convergence.png" alt="Best pilot titer plotted against cumulative experimental cost for all three methods, with shaded bands showing one standard deviation over 10 seeds." loading="lazy">
-      <figcaption>Best titer against budget spent. The tree methods start slower and close most of the gap by the end.</figcaption>
-    </figure>
-    <figure>
-      <img src="figures/08_distilled_tree.png" alt="The depth-3 decision tree distilled from the ensemble, showing split conditions on clone yield, pH and temperature, with eight leaves shaded by predicted titer." loading="lazy">
+      <img src="figures/08_distilled_tree.png" alt="The depth-3 decision tree distilled from the ensemble, showing split conditions on cell line yield, pH and temperature, with eight leaves shaded by predicted titer." loading="lazy">
       <figcaption>The tree behind the explorer above.</figcaption>
     </figure>
-
     <details id="more">
       <summary>More figures</summary>
       <div class="gallery">
         <figure><img src="figures/01_fidelity_setup.png" alt="Diagram of the three experimental scales: microtitre plate, mini-bioreactor and pilot reactor, with their cost, batch size, noise level and degree of control." loading="lazy"><figcaption>The three scales.</figcaption></figure>
-        <figure><img src="figures/02_final_performance.png" alt="Bar chart of final pilot titer for each method with error bars." loading="lazy"><figcaption>Final performance.</figcaption></figure>
+        <figure><img src="figures/03_convergence.png" alt="Best pilot titer against cumulative experimental cost for all three methods with shaded bands." loading="lazy"><figcaption>Convergence, as published.</figcaption></figure>
         <figure><img src="figures/04_fidelity_allocation.png" alt="Grouped bar chart of average rounds run at each scale per seed for each method." loading="lazy"><figcaption>Where the budget went.</figcaption></figure>
         <figure><img src="figures/05_fidelity_matrix.png" alt="Heat map of the learned correlation between the three experimental scales." loading="lazy"><figcaption>How the scales relate.</figcaption></figure>
         <figure><img src="figures/06_clone_learning.png" alt="Line plot showing distinct cell lines observed and the spread of their learned estimates over a campaign." loading="lazy"><figcaption>Learning the cell lines.</figcaption></figure>
         <figure><img src="figures/07_feature_importance.png" alt="Bar chart of feature importances from the interpretable ensemble." loading="lazy"><figcaption>What drives the model.</figcaption></figure>
         <figure><img src="figures/09_rule_validation.png" alt="Bar chart comparing recommended cell lines against random and average baselines in the simulator." loading="lazy"><figcaption>Rules tested in the simulator.</figcaption></figure>
+        <figure><img src="figures/02_final_performance.png" alt="Bar chart of final pilot titer for each method with error bars." loading="lazy"><figcaption>Final performance, as published.</figcaption></figure>
       </div>
     </details>
   </section>

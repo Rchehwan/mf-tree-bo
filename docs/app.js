@@ -1,12 +1,11 @@
 /* Tree surrogates for multi-fidelity BO — static demo.
-   Every number below is taken from results/*.json in this repository. */
+   Every number here comes from results/*.json in this repository. */
 (function () {
   "use strict";
 
-  // ── Depth-3 distilled tree (the reported run; matches figures/08_distilled_tree.png)
-  // Features: cy = clone average yield, ph = pH, tp = temperature, cb = clone best titer
+  // ── Depth-3 distilled tree (matches figures/08_distilled_tree.png)
   var TREE = {
-    f: "cy", t: 9.20, label: "Clone average yield",
+    f: "cy", t: 9.20, label: "Cell line average yield",
     yes: { f: "ph", t: 6.46, label: "pH",
       yes: { f: "tp", t: 33.41, label: "Temperature",
         yes: { leaf: 12.00 }, no: { leaf: 15.86 } },
@@ -15,59 +14,61 @@
     no: { f: "ph", t: 6.47, label: "pH",
       yes: { f: "tp", t: 33.81, label: "Temperature",
         yes: { leaf: 21.24 }, no: { leaf: 26.00 } },
-      no:  { f: "cb", t: 70.21, label: "Clone best titer",
+      no:  { f: "cb", t: 70.21, label: "Cell line best result",
         yes: { leaf: 18.04 }, no: { leaf: 9.08 } } }
   };
-  var LEAVES = [12.00, 15.86, 2.74, 7.05, 21.24, 26.00, 18.04, 9.08];
+  var LEAVES = [2.74, 7.05, 9.08, 12.00, 15.86, 18.04, 21.24, 26.00];
   var LEAF_MIN = 2.74, LEAF_MAX = 26.00;
+  var BEST_INPUT = { cy: 20, ph: 6.2, tp: 36, cb: 60 };  // reaches the 26.0 leaf
 
   var UNITS = { cy: "", ph: "", tp: " °C", cb: "" };
-  var DEC   = { cy: 1, ph: 2, tp: 1, cb: 1 };
+  var DEC = { cy: 1, ph: 2, tp: 1, cb: 1 };
 
-  // ── Reported results (results/*.json)
   var METHODS = [
-    { key: "gp",  name: "GP baseline", colour: "#0f5fa8", mean: 56.34, std: 5.64,
-      finals: [57.9, 59.3, 54.5, 46.7, 57.7, 45.6, 57.3, 59.0, 61.6, 63.9],
-      mix: [8.7, 2.4, 17.4], interp: false,
-      blurb: "The published Gaussian process engine. Calibrated uncertainty by construction, but returns a number with no readable reason." },
-    { key: "bark", name: "MF-BARK", colour: "#6a5acd", mean: 51.21, std: 9.71,
-      finals: [54.4, 52.2, 59.0, 55.1, 28.3, 57.2, 50.3, 58.7, 37.8, 58.9],
-      mix: [58.6, 2.7, 12.7], interp: false,
-      blurb: "A tree kernel sampled by MCMC. Two recipes are similar when the forest keeps sorting them into the same leaf." },
-    { key: "ng", name: "NGBoost ensemble", colour: "#0f8f7a", mean: 49.81, std: 9.11,
-      finals: [45.9, 54.3, 57.4, 39.4, 58.8, 52.1, 49.6, 28.7, 59.3, 52.6],
-      mix: [9.3, 0.0, 18.7], interp: true,
+    { key: "gp", name: "GP baseline", colour: "#1668ad", mean: 56.34, std: 5.64, on: true,
+      finals: [57.9, 59.3, 54.5, 46.7, 57.7, 45.6, 57.3, 59.0, 61.6, 63.9], interp: false,
+      blurb: "The published Gaussian process engine. Calibrated uncertainty by construction, but it returns a number with no readable reason." },
+    { key: "bark", name: "MF-BARK", colour: "#6a5acd", mean: 51.21, std: 9.71, on: true,
+      finals: [54.4, 52.2, 59.0, 55.1, 28.3, 57.2, 50.3, 58.7, 37.8, 58.9], interp: false,
+      blurb: "A tree kernel sampled by MCMC. Two recipes count as similar when the forest keeps sorting them into the same leaf." },
+    { key: "ng", name: "NGBoost ensemble", colour: "#0f8f7a", mean: 49.81, std: 9.11, on: true,
+      finals: [45.9, 54.3, 57.4, 39.4, 58.8, 52.1, 49.6, 28.7, 59.3, 52.6], interp: true,
       blurb: "Ten boosted models whose disagreement supplies the uncertainty. Each member stays a readable tree." }
   ];
 
   var VALIDATION = {
-    recommended: [ { clone: 19, v: 49.40 }, { clone: 15, v: 73.80 }, { clone: 22, v: 44.72 } ],
+    recommended: [{ clone: 19, v: 49.40 }, { clone: 15, v: 73.80 }, { clone: 22, v: 44.72 }],
     bo_best: 59.33, random: 3.49, avg_clone: 3.11
   };
 
+  var CONV = null, showBands = true;
   var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
 
-  // ── Tree evaluation ────────────────────────────────────────────
+  // ── Tree ──────────────────────────────────────────────────────
   function evaluate(v) {
-    var node = TREE, path = [], leafIndex = 0;
+    var node = TREE, path = [];
     while (!("leaf" in node)) {
-      var x = v[node.f], goYes = x <= node.t;
-      path.push({ label: node.label, feature: node.f, value: x, threshold: node.t, yes: goYes });
-      leafIndex = (leafIndex << 1) | (goYes ? 0 : 1);
+      var goYes = v[node.f] <= node.t;
+      path.push({ label: node.label, feature: node.f, value: v[node.f], threshold: node.t, yes: goYes });
       node = goYes ? node.yes : node.no;
     }
-    return { value: node.leaf, path: path, index: leafIndex, used: path.map(function (p) { return p.feature; }) };
+    return { value: node.leaf, path: path, used: path.map(function (p) { return p.feature; }) };
   }
 
   function fmt(f, x) { return x.toFixed(DEC[f]) + UNITS[f]; }
 
   function shade(v) {
-    var t = (v - LEAF_MIN) / (LEAF_MAX - LEAF_MIN);
-    t = Math.max(0, Math.min(1, t));
-    // pale olive (low titer) -> deep green (high titer)
-    return "rgb(" + Math.round(46 + (1 - t) * 120) + "," +
-                    Math.round(120 + (1 - t) * 55) + "," +
-                    Math.round(72 + (1 - t) * 40) + ")";
+    var t = Math.max(0, Math.min(1, (v - LEAF_MIN) / (LEAF_MAX - LEAF_MIN)));
+    return "rgb(" + Math.round(96 - 87 * t) + "," + Math.round(120 - 26 * t) + "," + Math.round(134 - 54 * t) + ")";
+  }
+
+  function leafStrip(active) {
+    $("leafbar").innerHTML = LEAVES.map(function (v) {
+      var on = Math.abs(v - active) < 1e-9;
+      return '<span class="chip' + (on ? " on" : "") + '" style="background:' + shade(v) +
+             '">' + v.toFixed(1) + "</span>";
+    }).join("");
   }
 
   function render() {
@@ -75,92 +76,153 @@
     ["cy", "ph", "tp", "cb"].forEach(function (f) { $(f + "-o").textContent = fmt(f, v[f]); });
 
     var r = evaluate(v);
+    var rank = LEAVES.slice().reverse().indexOf(r.value) + 1;
 
     $("leafnum").textContent = r.value.toFixed(1);
     $("leafcard").style.background = shade(r.value);
-    var rank = LEAVES.slice().sort(function (a, b) { return b - a; }).indexOf(r.value) + 1;
-    $("leafrank").textContent = "Highest-yielding leaf: rank " + rank + " of 8";
+    $("leafrank").textContent = rank === 1
+      ? "The highest of the eight outcomes"
+      : "Outcome " + rank + " of 8, highest is " + LEAF_MAX.toFixed(1) + " g/L";
 
-    // clone-best control is only consulted on one branch
-    $("cb-wrap").classList.toggle("dim", r.used.indexOf("cb") === -1);
-    $("cb-h").textContent = r.used.indexOf("cb") === -1
-      ? "Not used on this branch" : "Used to reach this leaf";
+    var unused = r.used.indexOf("cb") === -1;
+    $("cb-wrap").classList.toggle("dim", unused);
+    $("cb-h").textContent = unused ? "Not used on this branch" : "Used to reach this leaf";
 
     var ol = $("pathlist");
     ol.textContent = "";
     r.path.forEach(function (p, i) {
       var li = document.createElement("li");
-      var n = document.createElement("span");
-      n.className = "n"; n.textContent = String(i + 1);
-      var txt = document.createElement("span");
-      var cmp = p.yes ? " ≤ " : " > ";
-      txt.innerHTML = p.label + " <code>" + fmt(p.feature, p.value) + "</code>" + cmp +
-        "<code>" + p.threshold.toFixed(DEC[p.feature]) + "</code> — " +
-        (p.yes ? '<span class="yes">left</span>' : '<span class="no">right</span>');
-      li.appendChild(n); li.appendChild(txt);
+      li.innerHTML = '<span class="n">' + (i + 1) + "</span><span>" + esc(p.label) +
+        " <code>" + fmt(p.feature, p.value) + "</code>" + (p.yes ? " &le; " : " &gt; ") +
+        "<code>" + p.threshold.toFixed(DEC[p.feature]) + "</code> &rarr; " +
+        (p.yes ? '<span class="yes">left</span>' : '<span class="no">right</span>') + "</span>";
       ol.appendChild(li);
+    });
+
+    leafStrip(r.value);
+  }
+
+  // ── Convergence chart ─────────────────────────────────────────
+  function convChart() {
+    var box = $("convchart");
+    if (!CONV) { box.innerHTML = '<p class="empty">Convergence data not available.</p>'; return; }
+
+    var W = 660, H = 330, L = 54, R = 16, T = 14, B = 46;
+    var pw = W - L - R, ph = H - T - B;
+    var grid = CONV.grid, xmax = grid[grid.length - 1], ymax = 70;
+    var X = function (c) { return L + (c / xmax) * pw; };
+    var Y = function (v) { return T + ph - (v / ymax) * ph; };
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Best pilot titer against cumulative experimental cost for each selected method, averaged over ten seeds.">'];
+
+    for (var y = 0; y <= ymax; y += 10) {
+      s.push('<line x1="' + L + '" y1="' + Y(y) + '" x2="' + (L + pw) + '" y2="' + Y(y) + '" stroke="#eceff4"/>');
+      s.push('<text x="' + (L - 8) + '" y="' + (Y(y) + 4) + '" font-size="10.5" fill="#6b7a90" text-anchor="end">' + y + "</text>");
+    }
+    for (var c = 0; c <= xmax; c += 10000) {
+      s.push('<text x="' + X(c) + '" y="' + (H - 24) + '" font-size="10.5" fill="#6b7a90" text-anchor="middle">' + (c / 1000) + "k</text>");
+    }
+    s.push('<text x="' + (L + pw / 2) + '" y="' + (H - 6) + '" font-size="11" fill="#6b7a90" text-anchor="middle">cumulative experimental cost (€)</text>');
+    s.push('<text transform="translate(13,' + (T + ph / 2) + ') rotate(-90)" font-size="11" fill="#6b7a90" text-anchor="middle">best pilot titer (g/L)</text>');
+
+    METHODS.forEach(function (m) {
+      var d = CONV.methods[m.key];
+      if (!d || !m.on) return;
+      var pts = [], hi = [], lo = [];
+      for (var i = 0; i < grid.length; i++) {
+        if (d.mean[i] === null) continue;
+        pts.push(X(grid[i]) + "," + Y(d.mean[i]));
+        hi.push(X(grid[i]) + "," + Y(Math.min(ymax, d.mean[i] + (d.std[i] || 0))));
+        lo.unshift(X(grid[i]) + "," + Y(Math.max(0, d.mean[i] - (d.std[i] || 0))));
+      }
+      if (!pts.length) return;
+      if (showBands) s.push('<polygon points="' + hi.concat(lo).join(" ") + '" fill="' + m.colour + '" opacity=".13"/>');
+      s.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + m.colour + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>');
+    });
+    s.push('<line x1="' + X(xmax) + '" y1="' + T + '" x2="' + X(xmax) + '" y2="' + (T + ph) + '" stroke="#0e1726" stroke-dasharray="4 4" stroke-width="1.2"/>');
+    s.push("</svg>");
+    box.innerHTML = s.join("");
+  }
+
+  function toggles() {
+    $("toggles").innerHTML = METHODS.map(function (m) {
+      return '<button type="button" class="tg' + (m.on ? " on" : "") + '" data-k="' + m.key +
+        '" aria-pressed="' + m.on + '" style="--c:' + m.colour + '"><span class="sw"></span>' + m.name + "</button>";
+    }).join("");
+    Array.prototype.forEach.call($("toggles").querySelectorAll(".tg"), function (b) {
+      b.addEventListener("click", function () {
+        var m = METHODS.filter(function (x) { return x.key === b.dataset.k; })[0];
+        if (m.on && METHODS.filter(function (x) { return x.on; }).length === 1) return;
+        m.on = !m.on;
+        b.classList.toggle("on", m.on);
+        b.setAttribute("aria-pressed", String(m.on));
+        convChart(); finalChart();
+      });
     });
   }
 
-  // ── Comparison chart (inline SVG, no dependency) ───────────────
-  function chart() {
-    var W = 640, H = 300, L = 108, R = 22, T = 16, B = 42;
-    var maxV = 70, plotW = W - L - R, plotH = H - T - B;
-    var rowH = plotH / METHODS.length;
-    var x = function (val) { return L + (val / maxV) * plotW; };
-    var svg = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Final pilot titer by method. GP baseline 56.3, MF-BARK 51.2, NGBoost ensemble 49.8 grams per litre, each averaged over ten seeds.">'];
+  // ── Final performance ─────────────────────────────────────────
+  function finalChart() {
+    var shown = METHODS.filter(function (m) { return m.on; });
+    var W = 660, H = 60 + shown.length * 74, L = 20, R = 20, T = 16, B = 44;
+    var pw = W - L - R, ph = H - T - B, xmax = 70;
+    var X = function (v) { return L + (v / xmax) * pw; };
+    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Final pilot titer by method. GP baseline 56.3, MF-BARK 51.2, NGBoost ensemble 49.8 grams per litre, averaged over ten seeds.">'];
 
-    for (var g = 0; g <= maxV; g += 10) {
-      svg.push('<line x1="' + x(g) + '" y1="' + T + '" x2="' + x(g) + '" y2="' + (T + plotH) + '" stroke="#eef1f6"/>');
-      svg.push('<text x="' + x(g) + '" y="' + (H - 16) + '" font-size="11" fill="#6b7a90" text-anchor="middle">' + g + '</text>');
+    for (var g = 0; g <= xmax; g += 10) {
+      s.push('<line x1="' + X(g) + '" y1="' + T + '" x2="' + X(g) + '" y2="' + (T + ph) + '" stroke="#eceff4"/>');
+      s.push('<text x="' + X(g) + '" y="' + (H - 22) + '" font-size="10.5" fill="#6b7a90" text-anchor="middle">' + g + "</text>");
     }
-    svg.push('<text x="' + (L + plotW / 2) + '" y="' + (H - 2) + '" font-size="11" fill="#6b7a90" text-anchor="middle">final pilot titer (g/L)</text>');
+    s.push('<text x="' + (L + pw / 2) + '" y="' + (H - 5) + '" font-size="11" fill="#6b7a90" text-anchor="middle">final pilot titer (g/L)</text>');
 
-    METHODS.forEach(function (m, i) {
-      var cy = T + rowH * i + rowH / 2, bh = 22;
-      svg.push('<text x="' + (L - 10) + '" y="' + (cy + 4) + '" font-size="12.5" fill="#0e1726" text-anchor="end" font-weight="600">' + m.name + '</text>');
-      svg.push('<rect x="' + L + '" y="' + (cy - bh / 2) + '" width="' + (x(m.mean) - L) + '" height="' + bh + '" rx="5" fill="' + m.colour + '" opacity=".22"/>');
-      // std whisker
-      svg.push('<line x1="' + x(m.mean - m.std) + '" y1="' + cy + '" x2="' + x(m.mean + m.std) + '" y2="' + cy + '" stroke="' + m.colour + '" stroke-width="2" opacity=".5"/>');
+    shown.forEach(function (m, i) {
+      var top = T + i * 74;
+      s.push('<text x="' + L + '" y="' + (top + 13) + '" font-size="12.5" fill="#0e1726" font-weight="600">' + m.name + "</text>");
+      s.push('<text x="' + (L + pw) + '" y="' + (top + 13) + '" font-size="12.5" font-weight="700" fill="' + m.colour + '" text-anchor="end">' + m.mean.toFixed(1) + " g/L</text>");
+      var cy = top + 40;
+      s.push('<line x1="' + X(m.mean - m.std) + '" y1="' + cy + '" x2="' + X(m.mean + m.std) + '" y2="' + cy + '" stroke="' + m.colour + '" stroke-width="7" opacity=".16" stroke-linecap="round"/>');
       m.finals.forEach(function (f) {
-        svg.push('<circle cx="' + x(f) + '" cy="' + cy + '" r="3.4" fill="' + m.colour + '" opacity=".62"/>');
+        s.push('<circle cx="' + X(f) + '" cy="' + cy + '" r="4" fill="' + m.colour + '" opacity=".55"/>');
       });
-      svg.push('<line x1="' + x(m.mean) + '" y1="' + (cy - bh / 2 - 3) + '" x2="' + x(m.mean) + '" y2="' + (cy + bh / 2 + 3) + '" stroke="' + m.colour + '" stroke-width="3"/>');
-      svg.push('<text x="' + (x(m.mean) + 9) + '" y="' + (cy + 4) + '" font-size="12.5" font-weight="700" fill="' + m.colour + '">' + m.mean.toFixed(1) + '</text>');
+      s.push('<line x1="' + X(m.mean) + '" y1="' + (cy - 13) + '" x2="' + X(m.mean) + '" y2="' + (cy + 13) + '" stroke="' + m.colour + '" stroke-width="3.5" stroke-linecap="round"/>');
     });
-    svg.push('</svg>');
-    $("chart").innerHTML = svg.join("");
+    s.push("</svg>");
+    $("chart").innerHTML = s.join("");
   }
 
   function cards() {
     $("mcards").innerHTML = METHODS.map(function (m) {
-      return '<div class="mcard"><h3><span class="dot" style="background:' + m.colour + '"></span>' + m.name + "</h3>" +
-        "<p>" + m.blurb + "</p>" +
-        '<span class="tag ' + (m.interp ? "yes" : "no") + '">' +
+      return '<div class="mcard"><h3><span class="dot" style="background:' + m.colour + '"></span>' + m.name + "</h3><p>" +
+        m.blurb + '</p><span class="tag ' + (m.interp ? "yes" : "no") + '">' +
         (m.interp ? "Readable model" : "Black box") + "</span></div>";
     }).join("");
   }
 
   function validation() {
-    var max = 80;
     var rows = VALIDATION.recommended.map(function (r) {
       return { lab: "Recommended cell line " + r.clone, sub: "chosen by reading the model", v: r.v, base: false };
     });
     rows.push({ lab: "Best recipe the optimiser found", sub: "over a full campaign", v: VALIDATION.bo_best, base: false });
     rows.push({ lab: "Randomly chosen cell line", sub: "mean of 30 runs", v: VALIDATION.random, base: true });
     rows.push({ lab: "Average cell line", sub: "mean of 15 runs", v: VALIDATION.avg_clone, base: true });
-
     $("valgrid").innerHTML = rows.map(function (r) {
-      return '<div class="vrow' + (r.base ? " base" : "") + '">' +
-        '<div class="lab">' + r.lab + "<small>" + r.sub + "</small></div>" +
-        '<div class="val">' + r.v.toFixed(1) + " <span style=\"font-size:12px;font-weight:500;color:#6b7a90\">g/L</span></div>" +
-        '<div class="vbar"><i style="width:' + Math.min(100, (r.v / max) * 100) + '%"></i></div></div>';
+      return '<div class="vrow' + (r.base ? " base" : "") + '"><div class="lab">' + r.lab +
+        "<small>" + r.sub + '</small></div><div class="val">' + r.v.toFixed(1) +
+        ' <span class="u">g/L</span></div><div class="vbar"><i style="width:' +
+        Math.min(100, (r.v / 80) * 100) + '%"></i></div></div>';
     }).join("");
   }
 
-  ["cy", "ph", "tp", "cb"].forEach(function (id) {
-    $(id).addEventListener("input", render);
+  ["cy", "ph", "tp", "cb"].forEach(function (id) { $(id).addEventListener("input", render); });
+  $("best").addEventListener("click", function () {
+    Object.keys(BEST_INPUT).forEach(function (k) { $(k).value = BEST_INPUT[k]; });
+    render();
   });
+  $("bands").addEventListener("change", function () { showBands = this.checked; convChart(); });
 
-  render(); chart(); cards(); validation();
+  render(); toggles(); finalChart(); cards(); validation();
+
+  fetch("data/convergence.json")
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { CONV = j; convChart(); })
+    .catch(function () { convChart(); });
 })();
