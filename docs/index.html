@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tree surrogates for multi-fidelity Bayesian optimisation</title>
 <meta name="description" content="Interactive demo: can a readable decision tree replace the Gaussian process in multi-fidelity Bayesian optimisation for bioprocess development?">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
 
@@ -91,10 +91,22 @@
   <section id="convergence" aria-labelledby="c-h">
     <div class="sechead">
       <h2 id="c-h">Spending the budget</h2>
-      <p class="note">Best pilot titer as money is spent, averaged over ten seeds. Toggle the methods to compare.</p>
+      <p class="note">Best pilot titer as money is spent, averaged over ten seeds. Press play to watch the campaign run, or drag to any point in the budget.</p>
     </div>
     <div class="toggles" id="toggles" role="group" aria-label="Show or hide methods"></div>
     <div id="convchart" class="chart"></div>
+
+    <div class="player">
+      <button type="button" id="play" class="play" aria-label="Play the campaign">
+        <svg class="i-play" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z" fill="currentColor"/></svg>
+        <span id="playlab">Play</span>
+      </button>
+      <input type="range" id="scrub" min="0" max="59" value="59" step="1" aria-label="Experimental cost">
+      <output id="scrubout" class="scrubout">&euro;40,000</output>
+    </div>
+    <div class="live" id="live" aria-live="off"></div>
+
     <label class="bandtoggle">
       <input type="checkbox" id="bands" checked> Show spread across seeds
     </label>
@@ -105,7 +117,7 @@
   <section id="methods" aria-labelledby="m-h">
     <div class="sechead">
       <h2 id="m-h">Where they finish</h2>
-      <p class="note">Final pilot titer. The line marks the mean, dots are the ten individual runs.</p>
+      <p class="note">Final pilot titer. The tick marks the mean, the band is one standard deviation, dots are the ten individual runs.</p>
     </div>
     <div id="chart" class="chart"></div>
     <div class="cards" id="mcards"></div>
@@ -115,10 +127,23 @@
   <section id="validation" aria-labelledby="v-h">
     <div class="sechead">
       <h2 id="v-h">Do the rules hold up?</h2>
-      <p class="note">The cell lines the readable model recommends, run back through the simulator.</p>
+      <p class="note">Pick a cell line and see what the simulator returns for it.</p>
     </div>
-    <div class="valgrid" id="valgrid"></div>
-    <p class="caveat">Each recommendation was run once; the baselines are averages over 30 and 15 runs. The comparison reflects the whole recipe, not the rules alone.</p>
+
+    <div class="rchips" id="rchips" role="group" aria-label="Choose a cell line"></div>
+
+    <div class="rcard" id="rcard">
+      <div>
+        <p class="rname" id="rname">Clone 15</p>
+        <p class="rsub" id="rsub">recommended by reading the rules</p>
+      </div>
+      <p class="rbig"><span id="rval">73.8</span> <em>g/L</em></p>
+      <p class="rmul" id="rmul">21&times; the random baseline</p>
+    </div>
+
+    <div class="rrows" id="rrows"></div>
+
+    <p class="caveat">Each recommendation was run once; the two baselines are averages over 30 and 15 runs. The comparison reflects the whole recipe, not the rules alone.</p>
   </section>
 
   <!-- ── FIGURES ─────────────────────────────────────────────── -->
@@ -155,6 +180,6 @@
   </div>
 </footer>
 
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

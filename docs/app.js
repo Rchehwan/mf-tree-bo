@@ -36,14 +36,22 @@
       blurb: "Ten boosted models whose disagreement supplies the uncertainty. Each member stays a readable tree." }
   ];
 
-  var VALIDATION = {
-    recommended: [{ clone: 19, v: 49.40 }, { clone: 15, v: 73.80 }, { clone: 22, v: 44.72 }],
-    bo_best: 59.33, random: 3.49, avg_clone: 3.11
-  };
+  var RANDOM_BASE = 3.49;
+  var RULES = [
+    { key: "c15", label: "Cell line 15", sub: "recommended by reading the rules", v: 73.80, kind: "rule" },
+    { key: "bo",  label: "Best recipe the optimiser found", sub: "over a full campaign", v: 59.33, kind: "bo" },
+    { key: "c19", label: "Cell line 19", sub: "recommended by reading the rules", v: 49.40, kind: "rule" },
+    { key: "c22", label: "Cell line 22", sub: "recommended by reading the rules", v: 44.72, kind: "rule" },
+    { key: "rnd", label: "A cell line picked at random", sub: "mean of 30 runs", v: 3.49, sd: 6.81, kind: "base" },
+    { key: "avg", label: "An average cell line", sub: "mean of 15 runs", v: 3.11, sd: 2.45, kind: "base" }
+  ];
+  var RMAX = 80, rsel = "c15";
 
-  var CONV = null, showBands = true;
+  var CONV = null, showBands = true, cur = 59, nGrid = 60, playing = false, timer = null;
+
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
+  var eur = function (n) { return "€" + Math.round(n).toLocaleString("en-GB"); };
 
   // ── Tree ──────────────────────────────────────────────────────
   function evaluate(v) {
@@ -102,7 +110,7 @@
     leafStrip(r.value);
   }
 
-  // ── Convergence chart ─────────────────────────────────────────
+  // ── Convergence chart, animated ───────────────────────────────
   function convChart() {
     var box = $("convchart");
     if (!CONV) { box.innerHTML = '<p class="empty">Convergence data not available.</p>'; return; }
@@ -112,6 +120,8 @@
     var grid = CONV.grid, xmax = grid[grid.length - 1], ymax = 70;
     var X = function (c) { return L + (c / xmax) * pw; };
     var Y = function (v) { return T + ph - (v / ymax) * ph; };
+    var idx = Math.max(0, Math.min(cur, grid.length - 1));
+
     var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Best pilot titer against cumulative experimental cost for each selected method, averaged over ten seeds.">'];
 
     for (var y = 0; y <= ymax; y += 10) {
@@ -124,23 +134,59 @@
     s.push('<text x="' + (L + pw / 2) + '" y="' + (H - 6) + '" font-size="11" fill="#6b7a90" text-anchor="middle">cumulative experimental cost (€)</text>');
     s.push('<text transform="translate(13,' + (T + ph / 2) + ') rotate(-90)" font-size="11" fill="#6b7a90" text-anchor="middle">best pilot titer (g/L)</text>');
 
+    var heads = [];
     METHODS.forEach(function (m) {
       var d = CONV.methods[m.key];
       if (!d || !m.on) return;
-      var pts = [], hi = [], lo = [];
-      for (var i = 0; i < grid.length; i++) {
+      var pts = [], hi = [], lo = [], last = null;
+      for (var i = 0; i <= idx; i++) {
         if (d.mean[i] === null) continue;
         pts.push(X(grid[i]) + "," + Y(d.mean[i]));
         hi.push(X(grid[i]) + "," + Y(Math.min(ymax, d.mean[i] + (d.std[i] || 0))));
         lo.unshift(X(grid[i]) + "," + Y(Math.max(0, d.mean[i] - (d.std[i] || 0))));
+        last = { x: X(grid[i]), y: Y(d.mean[i]), v: d.mean[i] };
       }
       if (!pts.length) return;
-      if (showBands) s.push('<polygon points="' + hi.concat(lo).join(" ") + '" fill="' + m.colour + '" opacity=".13"/>');
-      s.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + m.colour + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>');
+      if (showBands && pts.length > 1) {
+        s.push('<polygon points="' + hi.concat(lo).join(" ") + '" fill="' + m.colour + '" opacity=".13"/>');
+      }
+      s.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + m.colour +
+             '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>');
+      heads.push({ m: m, p: last });
     });
-    s.push('<line x1="' + X(xmax) + '" y1="' + T + '" x2="' + X(xmax) + '" y2="' + (T + ph) + '" stroke="#0e1726" stroke-dasharray="4 4" stroke-width="1.2"/>');
+
+    // playhead
+    s.push('<line x1="' + X(grid[idx]) + '" y1="' + T + '" x2="' + X(grid[idx]) + '" y2="' + (T + ph) +
+           '" stroke="#0a4257" stroke-width="1.2" opacity=".45"/>');
+    heads.forEach(function (h) {
+      s.push('<circle cx="' + h.p.x + '" cy="' + h.p.y + '" r="5" fill="#fff" stroke="' + h.m.colour + '" stroke-width="2.6"/>');
+    });
     s.push("</svg>");
     box.innerHTML = s.join("");
+
+    // readout under the chart
+    $("live").innerHTML = METHODS.filter(function (m) { return m.on; }).map(function (m) {
+      var d = CONV.methods[m.key];
+      var v = d && d.mean[idx];
+      return '<span class="lv" style="--c:' + m.colour + '"><b>' + m.name + "</b>" +
+             (v === null || v === undefined ? "<i>not started</i>" : "<i>" + v.toFixed(1) + " g/L</i>") + "</span>";
+    }).join("");
+    $("scrubout").textContent = eur(grid[idx]);
+    if ($("scrub").value !== String(idx)) $("scrub").value = idx;
+  }
+
+  function setPlaying(on) {
+    playing = on;
+    $("play").classList.toggle("on", on);
+    $("playlab").textContent = on ? "Pause" : (cur >= nGrid - 1 ? "Replay" : "Play");
+    if (timer) { clearInterval(timer); timer = null; }
+    if (on) {
+      timer = setInterval(function () {
+        cur++;
+        if (cur >= nGrid - 1) { cur = nGrid - 1; convChart(); setPlaying(false); return; }
+        convChart();
+      }, 90);
+    }
   }
 
   function toggles() {
@@ -155,15 +201,14 @@
         m.on = !m.on;
         b.classList.toggle("on", m.on);
         b.setAttribute("aria-pressed", String(m.on));
-        convChart(); finalChart();
+        convChart();
       });
     });
   }
 
-  // ── Final performance ─────────────────────────────────────────
+  // ── Final performance (always shows all three) ────────────────
   function finalChart() {
-    var shown = METHODS.filter(function (m) { return m.on; });
-    var W = 660, H = 60 + shown.length * 74, L = 20, R = 20, T = 16, B = 44;
+    var W = 660, H = 60 + METHODS.length * 74, L = 20, R = 20, T = 16, B = 44;
     var pw = W - L - R, ph = H - T - B, xmax = 70;
     var X = function (v) { return L + (v / xmax) * pw; };
     var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Final pilot titer by method. GP baseline 56.3, MF-BARK 51.2, NGBoost ensemble 49.8 grams per litre, averaged over ten seeds.">'];
@@ -174,7 +219,7 @@
     }
     s.push('<text x="' + (L + pw / 2) + '" y="' + (H - 5) + '" font-size="11" fill="#6b7a90" text-anchor="middle">final pilot titer (g/L)</text>');
 
-    shown.forEach(function (m, i) {
+    METHODS.forEach(function (m, i) {
       var top = T + i * 74;
       s.push('<text x="' + L + '" y="' + (top + 13) + '" font-size="12.5" fill="#0e1726" font-weight="600">' + m.name + "</text>");
       s.push('<text x="' + (L + pw) + '" y="' + (top + 13) + '" font-size="12.5" font-weight="700" fill="' + m.colour + '" text-anchor="end">' + m.mean.toFixed(1) + " g/L</text>");
@@ -197,32 +242,62 @@
     }).join("");
   }
 
-  function validation() {
-    var rows = VALIDATION.recommended.map(function (r) {
-      return { lab: "Recommended cell line " + r.clone, sub: "chosen by reading the model", v: r.v, base: false };
-    });
-    rows.push({ lab: "Best recipe the optimiser found", sub: "over a full campaign", v: VALIDATION.bo_best, base: false });
-    rows.push({ lab: "Randomly chosen cell line", sub: "mean of 30 runs", v: VALIDATION.random, base: true });
-    rows.push({ lab: "Average cell line", sub: "mean of 15 runs", v: VALIDATION.avg_clone, base: true });
-    $("valgrid").innerHTML = rows.map(function (r) {
-      return '<div class="vrow' + (r.base ? " base" : "") + '"><div class="lab">' + r.lab +
-        "<small>" + r.sub + '</small></div><div class="val">' + r.v.toFixed(1) +
-        ' <span class="u">g/L</span></div><div class="vbar"><i style="width:' +
-        Math.min(100, (r.v / 80) * 100) + '%"></i></div></div>';
+  // ── Rule validation ───────────────────────────────────────────
+  function rulesUI() {
+    $("rchips").innerHTML = RULES.map(function (r) {
+      return '<button type="button" class="rc k-' + r.kind + (r.key === rsel ? " on" : "") +
+        '" data-k="' + r.key + '" aria-pressed="' + (r.key === rsel) + '">' + esc(r.label) + "</button>";
     }).join("");
+
+    $("rrows").innerHTML = RULES.map(function (r) {
+      return '<button type="button" class="rrow k-' + r.kind + (r.key === rsel ? " sel" : "") + '" data-k="' + r.key + '">' +
+        '<span class="rlab">' + esc(r.label) + "<small>" + esc(r.sub) + "</small></span>" +
+        '<span class="rtrack"><i style="width:' + (r.v / RMAX * 100).toFixed(1) + '%"></i></span>' +
+        '<span class="rv">' + r.v.toFixed(1) + "</span></button>";
+    }).join("");
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-k]"), function (b) {
+      if (!b.classList.contains("rc") && !b.classList.contains("rrow")) return;
+      b.addEventListener("click", function () { rsel = b.dataset.k; rulesUI(); });
+    });
+
+    var r = RULES.filter(function (x) { return x.key === rsel; })[0];
+    $("rname").textContent = r.label;
+    $("rsub").textContent = r.sub + (r.sd ? ", spread ±" + r.sd.toFixed(1) : "");
+    $("rval").textContent = r.v.toFixed(1);
+    $("rcard").className = "rcard k-" + r.kind;
+    $("rmul").textContent = r.key === "rnd"
+      ? "This is the random baseline"
+      : (r.v / RANDOM_BASE).toFixed(1) + "× the random baseline";
   }
 
+  // ── Wiring ────────────────────────────────────────────────────
   ["cy", "ph", "tp", "cb"].forEach(function (id) { $(id).addEventListener("input", render); });
   $("best").addEventListener("click", function () {
     Object.keys(BEST_INPUT).forEach(function (k) { $(k).value = BEST_INPUT[k]; });
     render();
   });
   $("bands").addEventListener("change", function () { showBands = this.checked; convChart(); });
+  $("play").addEventListener("click", function () {
+    if (playing) { setPlaying(false); return; }
+    if (cur >= nGrid - 1) cur = 0;
+    setPlaying(true);
+  });
+  $("scrub").addEventListener("input", function () {
+    setPlaying(false);
+    cur = +this.value;
+    $("playlab").textContent = cur >= nGrid - 1 ? "Replay" : "Play";
+    convChart();
+  });
 
-  render(); toggles(); finalChart(); cards(); validation();
+  render(); toggles(); finalChart(); cards(); rulesUI();
 
-  fetch("data/convergence.json")
+  fetch("data/convergence.json?v=3")
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (j) { CONV = j; convChart(); })
+    .then(function (j) {
+      CONV = j;
+      if (j) { nGrid = j.grid.length; cur = nGrid - 1; $("scrub").max = nGrid - 1; }
+      convChart();
+    })
     .catch(function () { convChart(); });
 })();
