@@ -110,6 +110,7 @@ above, renamed for readability.
 ```
 src/           surrogates, acquisition, BO loop, objective wrapper
 experiments/   one script per reported experiment
+analysis/      rebuilds the convergence data used by the site
 results/       summary JSON for each reported run
 figures/       the figures reported in the write-up
 docs/          the interactive site, published with GitHub Pages

@@ -1,61 +1,58 @@
 """
 Build docs/data/convergence.json for the interactive site.
 
-Reads the per-seed convergence traces produced by the experiment runs and
+Reads the per-seed convergence traces written by the experiment runs and
 resamples them onto a common cost grid, storing the mean and standard
-deviation per method. Run once after new experiments:
+deviation per method.
 
-    python analysis/build_convergence_data.py
+    python analysis/build_convergence_data.py [trace_dir]
+
+Defaults to results/. Each trace file is expected to contain a "seeds" list
+whose entries hold a "pilot_trace" of [cost, titer] pairs.
 """
 from __future__ import annotations
+
+import glob
 import json
 import os
-import glob
+import sys
+
 import numpy as np
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 BUDGET = 40_000
 N_GRID = 60
 
-# Trace files live wherever the runs wrote them. Point this at the folder
-# holding ch3_conv_traces_*.json if they are not in results/.
-SEARCH_DIRS = [
-    os.path.join(_ROOT, "results"),
-    os.path.expanduser("~/Desktop/Research Project/Step 1 (apply decision tree as "
-                       "surrogate and compare)/chapter3_constrained_multifidelity_discrete/results"),
-]
-
 PATTERNS = {
-    "gp":   "*conv_traces_gp_*.json",
+    "gp": "*conv_traces_gp_*.json",
     "bark": "*conv_traces_bark_*.json",
-    "ng":   "*conv_traces_ngboost_*.json",
+    "ng": "*conv_traces_ngboost_*.json",
 }
 
 
-def newest(pattern: str) -> str | None:
-    hits: list[str] = []
-    for d in SEARCH_DIRS:
-        hits += glob.glob(os.path.join(d, pattern))
+def newest(trace_dir: str, pattern: str) -> str | None:
+    hits = glob.glob(os.path.join(trace_dir, pattern))
     return sorted(hits)[-1] if hits else None
 
 
 def main() -> None:
+    trace_dir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(_ROOT, "results")
     grid = np.linspace(0, BUDGET, N_GRID)
-    out = {"grid": [round(float(g)) for g in grid], "methods": {}}
+    out: dict = {"grid": [round(float(g)) for g in grid], "methods": {}}
 
     for key, pattern in PATTERNS.items():
-        path = newest(pattern)
+        path = newest(trace_dir, pattern)
         if path is None:
-            print(f"  {key:5s} no trace file found for {pattern}")
+            print(f"  {key:5s} no trace file matching {pattern}")
             continue
 
         with open(path) as fh:
             data = json.load(fh)
 
-        mat = np.full((len(data["seeds"]), N_GRID), np.nan)
-        for i, seed in enumerate(data["seeds"]):
+        seeds = data["seeds"]
+        mat = np.full((len(seeds), N_GRID), np.nan)
+        for i, seed in enumerate(seeds):
             trace = seed.get("pilot_trace", [])
             if not trace:
                 continue
@@ -66,16 +63,23 @@ def main() -> None:
         mean = np.nanmean(mat, axis=0)
         std = np.nanstd(mat, axis=0)
         clean = lambda a: [None if not np.isfinite(v) else round(float(v), 2) for v in a]
-        out["methods"][key] = {"n_seeds": len(data["seeds"]),
-                               "mean": clean(mean), "std": clean(std)}
-        print(f"  {key:5s} {os.path.basename(path):48s} seeds={len(data['seeds'])}  "
+        out["methods"][key] = {
+            "n_seeds": len(seeds),
+            "mean": clean(mean),
+            "std": clean(std),
+        }
+        print(f"  {key:5s} {os.path.basename(path):44s} seeds={len(seeds)}  "
               f"final={mean[-1]:.1f} g/L")
+
+    if not out["methods"]:
+        print(f"\n  nothing written, no trace files found in {trace_dir}")
+        return
 
     dest = os.path.join(_ROOT, "docs", "data", "convergence.json")
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     with open(dest, "w") as fh:
         json.dump(out, fh, separators=(",", ":"))
-    print(f"\n  wrote {os.path.relpath(dest, _ROOT)}  "
+    print(f"\n  wrote {os.path.relpath(dest, _ROOT)} "
           f"({os.path.getsize(dest)} bytes, {len(out['methods'])} methods)")
 
 

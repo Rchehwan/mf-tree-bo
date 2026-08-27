@@ -13,8 +13,9 @@ import os, sys, json
 from datetime import datetime
 import numpy as np
 
-_HERE = os.path.dirname(os.path.abspath(__file__)); _CH3 = os.path.dirname(_HERE); _REPO = _CH3
-_MFBO = os.environ.get("MFBO_ROOT", os.path.expanduser("~/Desktop/Research Project/mf-bo4bio"))
+_HERE = os.path.dirname(os.path.abspath(__file__)); _REPO = os.path.dirname(_HERE)
+# Point MFBO_ROOT at a local clone of github.com/adrian-martens/mf-bo4bio
+_MFBO = os.environ.get("MFBO_ROOT", os.path.expanduser("~/mf-bo4bio"))
 for _p in (os.path.join(_MFBO, "src"), os.path.join(_REPO, "src"), _HERE):
     if _p not in sys.path:
         sys.path.insert(0, _p)
