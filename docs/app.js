@@ -53,6 +53,16 @@
   var esc = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
   var eur = function (n) { return "€" + Math.round(n).toLocaleString("en-GB"); };
 
+  // Every section renders independently. A missing element skips its own
+  // block instead of throwing and blanking the whole page.
+  function have() {
+    for (var i = 0; i < arguments.length; i++) if (!$(arguments[i])) return false;
+    return true;
+  }
+  function on(id, ev, fn) { var e = $(id); if (e) e.addEventListener(ev, fn); }
+  function txt(id, s) { var e = $(id); if (e) e.textContent = s; }
+  function html(id, s) { var e = $(id); if (e) e.innerHTML = s; }
+
   // ── Tree ──────────────────────────────────────────────────────
   function evaluate(v) {
     var node = TREE, path = [];
@@ -72,29 +82,30 @@
   }
 
   function leafStrip(active) {
-    $("leafbar").innerHTML = LEAVES.map(function (v) {
-      var on = Math.abs(v - active) < 1e-9;
-      return '<span class="chip' + (on ? " on" : "") + '" style="background:' + shade(v) +
+    html("leafbar", LEAVES.map(function (v) {
+      var sel = Math.abs(v - active) < 1e-9;
+      return '<span class="chip' + (sel ? " on" : "") + '" style="background:' + shade(v) +
              '">' + v.toFixed(1) + "</span>";
-    }).join("");
+    }).join(""));
   }
 
   function render() {
+    if (!have("cy", "ph", "tp", "cb", "pathlist")) return;
     var v = { cy: +$("cy").value, ph: +$("ph").value, tp: +$("tp").value, cb: +$("cb").value };
-    ["cy", "ph", "tp", "cb"].forEach(function (f) { $(f + "-o").textContent = fmt(f, v[f]); });
+    ["cy", "ph", "tp", "cb"].forEach(function (f) { txt(f + "-o", fmt(f, v[f])); });
 
     var r = evaluate(v);
     var rank = LEAVES.slice().reverse().indexOf(r.value) + 1;
 
-    $("leafnum").textContent = r.value.toFixed(1);
-    $("leafcard").style.background = shade(r.value);
-    $("leafrank").textContent = rank === 1
+    txt("leafnum", r.value.toFixed(1));
+    if ($("leafcard")) $("leafcard").style.background = shade(r.value);
+    txt("leafrank", rank === 1
       ? "The highest of the eight outcomes"
-      : "Outcome " + rank + " of 8, highest is " + LEAF_MAX.toFixed(1) + " g/L";
+      : "Outcome " + rank + " of 8, highest is " + LEAF_MAX.toFixed(1) + " g/L");
 
     var unused = r.used.indexOf("cb") === -1;
-    $("cb-wrap").classList.toggle("dim", unused);
-    $("cb-h").textContent = unused ? "Not used on this branch" : "Used to reach this leaf";
+    if ($("cb-wrap")) $("cb-wrap").classList.toggle("dim", unused);
+    txt("cb-h", unused ? "Not used on this branch" : "Used to reach this leaf");
 
     var ol = $("pathlist");
     ol.textContent = "";
@@ -113,6 +124,7 @@
   // ── Convergence chart, animated ───────────────────────────────
   function convChart() {
     var box = $("convchart");
+    if (!box) return;
     if (!CONV) { box.innerHTML = '<p class="empty">Convergence data not available.</p>'; return; }
 
     var W = 660, H = 330, L = 54, R = 16, T = 14, B = 46;
@@ -165,22 +177,22 @@
     box.innerHTML = s.join("");
 
     // readout under the chart
-    $("live").innerHTML = METHODS.filter(function (m) { return m.on; }).map(function (m) {
+    html("live", METHODS.filter(function (m) { return m.on; }).map(function (m) {
       var d = CONV.methods[m.key];
       var v = d && d.mean[idx];
       return '<span class="lv" style="--c:' + m.colour + '"><b>' + m.name + "</b>" +
              (v === null || v === undefined ? "<i>not started</i>" : "<i>" + v.toFixed(1) + " g/L</i>") + "</span>";
-    }).join("");
-    $("scrubout").textContent = eur(grid[idx]);
-    if ($("scrub").value !== String(idx)) $("scrub").value = idx;
+    }).join(""));
+    txt("scrubout", eur(grid[idx]));
+    if ($("scrub") && $("scrub").value !== String(idx)) $("scrub").value = idx;
   }
 
-  function setPlaying(on) {
-    playing = on;
-    $("play").classList.toggle("on", on);
-    $("playlab").textContent = on ? "Pause" : (cur >= nGrid - 1 ? "Replay" : "Play");
+  function setPlaying(go) {
+    playing = go;
+    if ($("play")) $("play").classList.toggle("on", go);
+    txt("playlab", go ? "Pause" : (cur >= nGrid - 1 ? "Replay" : "Play"));
     if (timer) { clearInterval(timer); timer = null; }
-    if (on) {
+    if (go) {
       timer = setInterval(function () {
         cur++;
         if (cur >= nGrid - 1) { cur = nGrid - 1; convChart(); setPlaying(false); return; }
@@ -190,6 +202,7 @@
   }
 
   function toggles() {
+    if (!$("toggles")) return;
     $("toggles").innerHTML = METHODS.map(function (m) {
       return '<button type="button" class="tg' + (m.on ? " on" : "") + '" data-k="' + m.key +
         '" aria-pressed="' + m.on + '" style="--c:' + m.colour + '"><span class="sw"></span>' + m.name + "</button>";
@@ -208,6 +221,7 @@
 
   // ── Final performance (always shows all three) ────────────────
   function finalChart() {
+    if (!$("chart")) return;
     var W = 660, H = 60 + METHODS.length * 74, L = 20, R = 20, T = 16, B = 44;
     var pw = W - L - R, ph = H - T - B, xmax = 70;
     var X = function (v) { return L + (v / xmax) * pw; };
@@ -231,19 +245,21 @@
       s.push('<line x1="' + X(m.mean) + '" y1="' + (cy - 13) + '" x2="' + X(m.mean) + '" y2="' + (cy + 13) + '" stroke="' + m.colour + '" stroke-width="3.5" stroke-linecap="round"/>');
     });
     s.push("</svg>");
-    $("chart").innerHTML = s.join("");
+    html("chart", s.join(""));
   }
 
   function cards() {
-    $("mcards").innerHTML = METHODS.map(function (m) {
+    html("mcards", METHODS.map(function (m) {
       return '<div class="mcard"><h3><span class="dot" style="background:' + m.colour + '"></span>' + m.name + "</h3><p>" +
         m.blurb + '</p><span class="tag ' + (m.interp ? "yes" : "no") + '">' +
         (m.interp ? "Readable model" : "Black box") + "</span></div>";
-    }).join("");
+    }).join(""));
   }
 
   // ── Rule validation ───────────────────────────────────────────
   function rulesUI() {
+    if (!have("rchips", "rrows", "rcard")) return;
+
     $("rchips").innerHTML = RULES.map(function (r) {
       return '<button type="button" class="rc k-' + r.kind + (r.key === rsel ? " on" : "") +
         '" data-k="' + r.key + '" aria-pressed="' + (r.key === rsel) + '">' + esc(r.label) + "</button>";
@@ -262,41 +278,47 @@
     });
 
     var r = RULES.filter(function (x) { return x.key === rsel; })[0];
-    $("rname").textContent = r.label;
-    $("rsub").textContent = r.sub + (r.sd ? ", spread ±" + r.sd.toFixed(1) : "");
-    $("rval").textContent = r.v.toFixed(1);
+    txt("rname", r.label);
+    txt("rsub", r.sub + (r.sd ? ", spread ±" + r.sd.toFixed(1) : ""));
+    txt("rval", r.v.toFixed(1));
     $("rcard").className = "rcard k-" + r.kind;
-    $("rmul").textContent = r.key === "rnd"
+    txt("rmul", r.key === "rnd"
       ? "This is the random baseline"
-      : (r.v / RANDOM_BASE).toFixed(1) + "× the random baseline";
+      : (r.v / RANDOM_BASE).toFixed(1) + "× the random baseline");
   }
 
   // ── Wiring ────────────────────────────────────────────────────
-  ["cy", "ph", "tp", "cb"].forEach(function (id) { $(id).addEventListener("input", render); });
-  $("best").addEventListener("click", function () {
-    Object.keys(BEST_INPUT).forEach(function (k) { $(k).value = BEST_INPUT[k]; });
+  ["cy", "ph", "tp", "cb"].forEach(function (id) { on(id, "input", render); });
+  on("best", "click", function () {
+    Object.keys(BEST_INPUT).forEach(function (k) { if ($(k)) $(k).value = BEST_INPUT[k]; });
     render();
   });
-  $("bands").addEventListener("change", function () { showBands = this.checked; convChart(); });
-  $("play").addEventListener("click", function () {
+  on("bands", "change", function () { showBands = this.checked; convChart(); });
+  on("play", "click", function () {
     if (playing) { setPlaying(false); return; }
     if (cur >= nGrid - 1) cur = 0;
     setPlaying(true);
   });
-  $("scrub").addEventListener("input", function () {
+  on("scrub", "input", function () {
     setPlaying(false);
     cur = +this.value;
-    $("playlab").textContent = cur >= nGrid - 1 ? "Replay" : "Play";
+    txt("playlab", cur >= nGrid - 1 ? "Replay" : "Play");
     convChart();
   });
 
-  render(); toggles(); finalChart(); cards(); rulesUI();
+  [render, toggles, finalChart, cards, rulesUI].forEach(function (f) {
+    try { f(); } catch (e) { if (window.console) console.error(e); }
+  });
 
   fetch("data/convergence.json?v=3")
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (j) {
       CONV = j;
-      if (j) { nGrid = j.grid.length; cur = nGrid - 1; $("scrub").max = nGrid - 1; }
+      if (j) {
+        nGrid = j.grid.length;
+        cur = nGrid - 1;
+        if ($("scrub")) $("scrub").max = nGrid - 1;
+      }
       convChart();
     })
     .catch(function () { convChart(); });
