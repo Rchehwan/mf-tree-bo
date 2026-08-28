@@ -10,7 +10,7 @@ accuracy and also selects one of 30 cell lines, under a fixed €40,000 experime
 
 <p align="center">
   <a href="https://rchehwan.github.io/mf-tree-bo/">
-    <img src="https://img.shields.io/badge/▶%20Explore%20the%20model%20interactively-003E74?style=for-the-badge&labelColor=003E74" alt="Explore the model interactively">
+    <img src="https://img.shields.io/badge/▶%20Explore%20the%20model%20interactively-BF3B1E?style=for-the-badge&labelColor=BF3B1E" alt="Explore the model interactively">
   </a>
 </p>
 
